@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model answers {
+  id                 Int       @id @default(autoincrement())
+  attempt_id         Int
+  question_id        Int
+  selected_option_id Int?
+  is_correct         Boolean   @default(false)
+  attempts           attempts  @relation(fields: [attempt_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  questions          questions @relation(fields: [question_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  options            options?  @relation(fields: [selected_option_id], references: [id], onUpdate: NoAction)
+
+  @@index([attempt_id], map: "idx_answers_attempt")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model attempts {
+  id                 Int       @id @default(autoincrement())
+  quiz_id            Int
+  user_id            Int
+  score              Int       @default(0)
+  percentage         Decimal   @default(0) @db.Decimal(5, 2)
+  correct_answers    Int       @default(0)
+  incorrect_answers  Int       @default(0)
+  unanswered         Int       @default(0)
+  time_taken_seconds Int       @default(0)
+  status             String    @default("IN_PROGRESS") @db.VarChar(15)
+  started_at         DateTime  @default(now()) @db.Timestamp(6)
+  completed_at       DateTime? @db.Timestamp(6)
+  answers            answers[]
+  quizzes            quizzes   @relation(fields: [quiz_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users              users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([quiz_id], map: "idx_attempts_quiz")
+  @@index([user_id], map: "idx_attempts_user")
+}
+
+model categories {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique @db.VarChar(100)
+  description String?
+  created_at  DateTime  @default(now()) @db.Timestamp(6)
+  quizzes     quizzes[]
+}
+
+model options {
+  id          Int       @id @default(autoincrement())
+  question_id Int
+  option_text String    @db.VarChar(500)
+  is_correct  Boolean   @default(false)
+  answers     answers[]
+  questions   questions @relation(fields: [question_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([question_id], map: "idx_options_question")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model questions {
+  id            Int       @id @default(autoincrement())
+  quiz_id       Int
+  question_text String
+  marks         Int       @default(1)
+  explanation   String?
+  difficulty    String?   @db.VarChar(20)
+  created_at    DateTime  @default(now()) @db.Timestamp(6)
+  answers       answers[]
+  options       options[]
+  quizzes       quizzes   @relation(fields: [quiz_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([quiz_id], map: "idx_questions_quiz")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model quizzes {
+  id               Int         @id @default(autoincrement())
+  title            String      @db.VarChar(200)
+  description      String?
+  category_id      Int
+  difficulty       String      @db.VarChar(20)
+  duration_minutes Int
+  passing_score    Int
+  max_attempts     Int         @default(1)
+  status           String      @default("DRAFT") @db.VarChar(15)
+  thumbnail_url    String?     @db.VarChar(255)
+  created_by       Int?
+  created_at       DateTime    @default(now()) @db.Timestamp(6)
+  updated_at       DateTime    @default(now()) @db.Timestamp(6)
+  attempts         attempts[]
+  questions        questions[]
+  categories       categories  @relation(fields: [category_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  users            users?      @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([category_id], map: "idx_quizzes_category")
+  @@index([status], map: "idx_quizzes_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model users {
+  id            Int        @id @default(autoincrement())
+  name          String     @db.VarChar(150)
+  email         String     @unique @db.VarChar(150)
+  password_hash String     @db.VarChar(255)
+  role          String     @db.VarChar(10)
+  status        String     @default("ACTIVE") @db.VarChar(10)
+  created_at    DateTime   @default(now()) @db.Timestamp(6)
+  attempts      attempts[]
+  quizzes       quizzes[]
+}
