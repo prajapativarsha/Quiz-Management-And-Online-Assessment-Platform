@@ -162,3 +162,10 @@ documents/
 *.njsproj
 *.sln
 *.sw?
+
+#Ai-Assistant Caches
+.agents/
+.claude/
+.windsurf/
+
+/generated/prisma
